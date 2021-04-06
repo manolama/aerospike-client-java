@@ -539,9 +539,7 @@ public class Cluster implements Runnable, Closeable {
 								final Node[] nodeArray = nodes;
 
 								for (Node node : nodeArray) {
-									if (node.errorCountWithinLimit()) {
-										node.balanceAsyncConnections(eventLoop);
-									}
+									node.balanceAsyncConnections(eventLoop);
 								}
 							}
 							catch (Exception e) {
@@ -1019,7 +1017,7 @@ public class Cluster implements Runnable, Closeable {
 					opened += cs.opened;
 					closed += cs.closed;
 				}
-				nodeStats[i].async = new ConnectionStats(inUse, inPool, opened, closed);
+				nodeStats[i].async = new ConnectionStats(inUse, inPool, opened, closed, connStats[i]);
 			}
 		}
 		return new ClusterStats(nodeStats, eventLoopStats, threadsInUse, recoverCount.get());

@@ -863,7 +863,32 @@ public class Node implements Closeable {
 	}
 
 	public final void balanceAsyncConnections(EventLoop eventLoop) {
-		AsyncPool pool = asyncConnectionPools[eventLoop.getIndex()];
+		int index = eventLoop.getIndex();
+		AsyncPool pool = asyncConnectionPools[index];
+
+		if (pool.total > pool.maxSize) {
+			Log.warn("Node " + this + " eventloop " + index + " conns(" + pool.total + ") > max(" + pool.maxSize + ")");
+
+			int size = pool.total - pool.maxSize;
+			int closed = 0;
+
+			for (int i = 0; i < size; i++) {
+				AsyncConnection conn = pool.queue.pollLast();
+
+				if (conn != null) {
+					conn.close();
+					pool.connectionClosed();
+					closed++;
+				}
+				else {
+					// Excess connections may be active and these can't be closed.
+					break;
+				}
+			}
+			Log.warn("Node " + this + " eventloop " + index + " closed " + closed + " connections");
+			return;
+		}
+
 		int excess = pool.excess();
 
 		if (excess > 0) {

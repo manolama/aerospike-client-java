@@ -40,6 +40,8 @@ public final class ConnectionStats {
 	 */
 	public final int closed;
 
+	public final ConnectionStats[] loops;
+
 	/**
 	 * Connection statistics constructor.
 	 */
@@ -48,12 +50,35 @@ public final class ConnectionStats {
 		this.inPool = inPool;
 		this.opened = opened;
 		this.closed = closed;
+		this.loops = null;
+	}
+
+	public ConnectionStats(int inUse, int inPool, int opened, int closed, ConnectionStats[] loops) {
+		this.inUse = inUse;
+		this.inPool = inPool;
+		this.opened = opened;
+		this.closed = closed;
+		this.loops = loops;
 	}
 
 	/**
 	 * Convert statistics to string.
 	 */
 	public String toString() {
-		return "" + inUse + ',' + inPool + ',' + opened + ',' + closed;
+		if (loops == null) {
+			return "" + inUse + ',' + inPool + ',' + opened + ',' + closed;
+		}
+
+		StringBuilder sb = new StringBuilder(4096);
+		sb.append("" + inUse + ',' + inPool + ',' + opened + ',' + closed);
+
+		int index = 0;
+
+		for (ConnectionStats cs : loops) {
+			sb.append(System.lineSeparator());
+			sb.append("eventloop[" + index + "] " + cs.inUse + ',' + cs.inPool + ',' + cs.opened + ',' + cs.closed);
+			index++;
+		}
+		return sb.toString();
 	}
 }
