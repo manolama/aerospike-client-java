@@ -48,6 +48,7 @@ public abstract class MultiCommand extends SyncCommand {
 	protected int batchIndex;
 	protected int fieldCount;
 	protected int opCount;
+	protected boolean deserializeKeys;
 	private final boolean stopOnNotFound;
 	private final boolean first;
 	protected volatile boolean valid = true;
@@ -265,8 +266,13 @@ public abstract class MultiCommand extends SyncCommand {
 			opCount = Buffer.bytesToShort(dataBuffer, dataOffset);
 			dataOffset += 2;
 
-			Key key = parseKey(fieldCount);
-			parseRow(key);
+			if (deserializeKeys) {
+				Key key = parseKey(fieldCount);
+				parseRow(key);
+			} else {
+				skipKey(fieldCount);
+				parseRow(null);
+			}
 		}
 		return true;
 	}

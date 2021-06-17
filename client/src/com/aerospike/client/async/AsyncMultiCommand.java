@@ -45,6 +45,7 @@ public abstract class AsyncMultiCommand extends AsyncCommand {
 	int batchIndex;
 	int fieldCount;
 	int opCount;
+	boolean deserializeKeys;
 	final boolean stopOnNotFound;
 
 	/**
@@ -112,8 +113,13 @@ public abstract class AsyncMultiCommand extends AsyncCommand {
 			opCount = Buffer.bytesToShort(dataBuffer, dataOffset);
 			dataOffset += 2;
 
-			Key key = parseKey();
-			parseRow(key);
+			if (deserializeKeys) {
+				Key key = parseKey();
+				parseRow(key);
+			} else {
+				skipKey(fieldCount);
+				parseRow(null);
+			}
 		}
 		return false;
 	}

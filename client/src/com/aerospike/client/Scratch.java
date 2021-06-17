@@ -59,7 +59,6 @@ public class Scratch {
     final String namespace = "test"; //"yamas";
     AerospikeClient asClient = new AerospikeClient(policy, hosts);
 
-
     if (false) {
       // just one call.....
 //      ClientPolicy policy = new ClientPolicy();
