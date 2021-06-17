@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.aerospike.client.AerospikeException;
+import com.aerospike.client.BufferedRecord;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.ResultCode;
@@ -159,36 +160,40 @@ public abstract class AsyncMultiCommand extends AsyncCommand {
 	}
 
 	protected final Record parseRecord() {
+
 		if (opCount <= 0) {
 			return new Record(null, generation, expiration);
 		}
-		Record r = new Record(null, generation, expiration);
-		for (int i = 0; i < opCount; i++) {
-			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset) + 4;
-			if (r.bufferIdx + opSize >= r.buffer.length) {
-				r.buffer = Arrays.copyOf(r.buffer, r.bufferIdx + opSize);
-			}
+		if (policy.useBufferedRecords) {
+			BufferedRecord r = new BufferedRecord(null, generation, expiration);
+			for (int i = 0; i < opCount; i++) {
+				int opSize = Buffer.bytesToInt(dataBuffer, dataOffset) + 4;
+				if (r.bufferIdx + opSize >= r.buffer.length) {
+					r.buffer = Arrays.copyOf(r.buffer, r.bufferIdx + opSize);
+				}
 
-			System.arraycopy(dataBuffer, dataOffset, r.buffer, r.bufferIdx, opSize);
-			dataOffset += opSize;
-			r.bufferIdx += opSize;
+				System.arraycopy(dataBuffer, dataOffset, r.buffer, r.bufferIdx, opSize);
+				dataOffset += opSize;
+				r.bufferIdx += opSize;
+			}
+			return r;
+		} else {
+			Map<String,Object> bins = new LinkedHashMap<>();
+
+			for (int i = 0 ; i < opCount; i++) {
+				int opSize = Buffer.bytesToInt(dataBuffer, dataOffset);
+				byte particleType = dataBuffer[dataOffset + 5];
+				byte nameSize = dataBuffer[dataOffset + 7];
+				String name = Buffer.utf8ToString(dataBuffer, dataOffset + 8, nameSize);
+				dataOffset += 4 + 4 + nameSize;
+
+				int particleBytesSize = opSize - (4 + nameSize);
+				Object value = Buffer.bytesToParticle(particleType, dataBuffer, dataOffset, particleBytesSize);
+				dataOffset += particleBytesSize;
+				bins.put(name, value);
+			}
+			return new Record(bins, generation, expiration);
 		}
-		return r;
-//		Map<String,Object> bins = new LinkedHashMap<>();
-//
-//		for (int i = 0 ; i < opCount; i++) {
-//			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset);
-//			byte particleType = dataBuffer[dataOffset + 5];
-//			byte nameSize = dataBuffer[dataOffset + 7];
-//			String name = Buffer.utf8ToString(dataBuffer, dataOffset + 8, nameSize);
-//			dataOffset += 4 + 4 + nameSize;
-//
-//			int particleBytesSize = opSize - (4 + nameSize);
-//			Object value = Buffer.bytesToParticle(particleType, dataBuffer, dataOffset, particleBytesSize);
-//			dataOffset += particleBytesSize;
-//			bins.put(name, value);
-//		}
-//		return new Record(bins, generation, expiration);
 	}
 
 	@Override

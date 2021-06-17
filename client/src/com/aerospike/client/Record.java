@@ -27,14 +27,11 @@ import com.aerospike.client.command.Buffer;
 /**
  * Container object for records.  Records are equivalent to rows.
  */
-public final class Record {
+public class Record {
 	/**
 	 * Map of requested name/value bins.
 	 */
 	public final Map<String,Object> bins;
-
-	public byte[] buffer;
-	public int bufferIdx;
 
 	/**
 	 * Record modification count.
@@ -54,7 +51,6 @@ public final class Record {
 		int generation,
 		int expiration
 	) {
-		buffer = new byte[1024];
 		this.bins = bins;
 		this.generation = generation;
 		this.expiration = expiration;
@@ -66,34 +62,6 @@ public final class Record {
 	 */
 	public Object getValue(String name) {
 		return (bins == null)? null : bins.get(name);
-	}
-
-	public Object getValueFromBuffer(final String name) {
-		if (bufferIdx <= 0) {
-			return null;
-		}
-
-		int readIdx = 0;
-		while (readIdx < bufferIdx) {
-			int opSize = Buffer.bytesToInt(buffer, readIdx);
-			 byte nameSize = buffer[readIdx + 7];
-			 String bin = Buffer.utf8ToString(buffer, readIdx + 8, nameSize);
-			 // could be null bins?
-							 if (name == null && bin != null) {
-							 continue;
-			 } else if (name != null && bin == null) {
-							 continue;
-			 } else if (!name.equals(bin)) {
-							 continue;
-			 }
-
-			 // matched
-			 byte particleType = buffer[readIdx + 5];
-			int particleByteSize = opSize - (4 + nameSize);
-			readIdx += 4 + 4 + nameSize;
-			return Buffer.bytesToParticle(particleType, buffer, readIdx, particleByteSize);
-		}
-		return null;
 	}
 
 	/**

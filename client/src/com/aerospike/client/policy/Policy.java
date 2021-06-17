@@ -237,6 +237,11 @@ public class Policy {
 	public boolean failOnFilteredOut;
 
 	/**
+	 * TODO
+	 */
+	public boolean useBufferedRecords;
+
+	/**
 	 * Copy policy from another policy.
 	 */
 	public Policy(Policy other) {
