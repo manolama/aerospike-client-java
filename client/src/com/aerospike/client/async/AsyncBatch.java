@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.BatchRead;
+import com.aerospike.client.BufferedRecord;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.cluster.Cluster;
@@ -85,7 +86,7 @@ public final class AsyncBatch {
 			BatchPolicy batchPolicy,
 			List<BatchRead> records
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, false);
 			this.records = records;
 		}
 
@@ -164,7 +165,7 @@ public final class AsyncBatch {
 			BatchSequenceListener listener,
 			List<BatchRead> records
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, false);
 			this.listener = listener;
 			this.records = records;
 		}
@@ -206,16 +207,17 @@ public final class AsyncBatch {
 		private final Record[] recordArray;
 
 		public GetArrayExecutor(
-			EventLoop eventLoop,
-			Cluster cluster,
-			BatchPolicy policy,
-			RecordArrayListener listener,
-			Key[] keys,
-			String[] binNames,
-			int readAttr
+						EventLoop eventLoop,
+						Cluster cluster,
+						BatchPolicy policy,
+						RecordArrayListener listener,
+						Key[] keys,
+						BufferedRecord[] batchRecords,
+						String[] binNames,
+						int readAttr
 		) {
 			super(eventLoop, cluster, policy, keys, true);
-			this.recordArray = new Record[keys.length];
+			this.recordArray = batchRecords == null ? new Record[keys.length] : batchRecords;
 			this.listener = listener;
 
 			// Create commands.
@@ -223,7 +225,7 @@ public final class AsyncBatch {
 			int count = 0;
 
 			for (BatchNode batchNode : batchNodes) {
-				tasks[count++] = new GetArrayCommand(this, batchNode, policy, keys, binNames, recordArray, readAttr);
+				tasks[count++] = new GetArrayCommand(this, batchNode, policy, keys, binNames, recordArray, readAttr, batchRecords != null);
 			}
 			// Dispatch commands to nodes.
 			execute(tasks, 0);
@@ -251,9 +253,10 @@ public final class AsyncBatch {
 			Key[] keys,
 			String[] binNames,
 			Record[] records,
-			int readAttr
+			int readAttr,
+			boolean usingBufferedRecords
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, usingBufferedRecords);
 			this.keys = keys;
 			this.binNames = binNames;
 			this.records = records;
@@ -268,14 +271,18 @@ public final class AsyncBatch {
 		@Override
 		protected void parseRow(Key key) {
 			if (resultCode == 0) {
-				records[batchIndex] = parseRecord();
+				if (usingBufferedRecords) {
+					parseRecord(((BufferedRecord) records[batchIndex]));
+				} else {
+					records[batchIndex] = parseRecord();
+				}
 			}
 		}
 
 		@Override
 		protected AsyncBatchCommand createCommand(BatchNode batchNode)
 		{
-			return new GetArrayCommand(parent, batchNode, batchPolicy, keys, binNames, records, readAttr);
+			return new GetArrayCommand(parent, batchNode, batchPolicy, keys, binNames, records, readAttr, false);
 		}
 
 		@Override
@@ -341,7 +348,7 @@ public final class AsyncBatch {
 			RecordSequenceListener listener,
 			int readAttr
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, false);
 			this.keys = keys;
 			this.binNames = binNames;
 			this.listener = listener;
@@ -429,7 +436,7 @@ public final class AsyncBatch {
 			Key[] keys,
 			boolean[] existsArray
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, false);
 			this.keys = keys;
 			this.existsArray = existsArray;
 		}
@@ -509,7 +516,7 @@ public final class AsyncBatch {
 			Key[] keys,
 			ExistsSequenceListener listener
 		) {
-			super(parent, batch, batchPolicy);
+			super(parent, batch, batchPolicy, false);
 			this.keys = keys;
 			this.listener = listener;
 		}
@@ -573,14 +580,16 @@ public final class AsyncBatch {
 	{
 		final BatchNode batch;
 		final BatchPolicy batchPolicy;
+		final boolean usingBufferedRecords;
 		int sequenceAP;
 		int sequenceSC;
 
-		public AsyncBatchCommand(AsyncMultiExecutor parent, BatchNode batch, BatchPolicy batchPolicy)
+		public AsyncBatchCommand(AsyncMultiExecutor parent, BatchNode batch, BatchPolicy batchPolicy, boolean usingBufferedRecords)
 		{
 			super(parent, batch.node, batchPolicy);
 			this.batch = batch;
 			this.batchPolicy = batchPolicy;
+			this.usingBufferedRecords = usingBufferedRecords;
 		}
 
 		@Override

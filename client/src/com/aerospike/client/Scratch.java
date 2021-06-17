@@ -31,6 +31,7 @@ public class Scratch {
   static long maxBatchTime = 0;
   static int runs = 4;
   static int validatedKeys = 0;
+  static BufferedRecord[] bufferedRecords;
 
   public static void main(final String[] args) {
     Mode mode = Mode.valueOf(args[0]);
@@ -120,6 +121,10 @@ public class Scratch {
     byte[][] bkeys = new byte[batchSize][];
     for (int x = 0; x < bkeys.length; x++) {
       bkeys[x] = new byte[12];
+    }
+    bufferedRecords = new BufferedRecord[batchSize];
+    for (int i = 0; i < bufferedRecords.length; i++) {
+      bufferedRecords[i] = new BufferedRecord(null, 0, 0);
     }
 
     for (int i = 0; i < runs; i++) {
@@ -297,26 +302,45 @@ public class Scratch {
         int validKeys = 0;
         for (int i = 0; i < records.length; i++) {
           Record record = records[i];
-          if (record == null) {
+          if (record == null ||
+                  (record instanceof BufferedRecord && ((BufferedRecord) record).bufferIdx <= 0)) {
             continue;
           }
           validKeys++;
           byte[] kv = (byte[]) keys[i].userKey.getObject();
-          byte[] r = null;
+          //byte[] r = null;
           if (records[i].bins != null) {
-            r = (byte[]) records[i].getValue("b");
-          } else {
-            r = (byte[]) ((BufferedRecord) records[i]).getValueFromBuffer("b");
-          }
-          for (int x = 0; x < kv.length; x++) {
-            if (r[x] != kv[x]) {
-              System.out.println("FAIL VALUE VALIDATION!!!!!! \n" + Arrays.toString(kv) +"\n" +
-                      Arrays.toString(r) +"\n");
-              client.close();
-              System.exit(1);
+            byte[] r = (byte[]) records[i].getValue("b");
+
+            for (int x = 0; x < kv.length; x++) {
+              if (r[x] != kv[x]) {
+                System.out.println("FAIL VALUE VALIDATION!!!!!! \n" + Arrays.toString(kv) +"\n" +
+                        Arrays.toString(r) +"\n");
+                client.close();
+                System.exit(1);
+              }
             }
+            validatedKeys++;
+
+          } else {
+            long indices = ((BufferedRecord) records[i]).byteArrayIndex("b");
+            int idx = (int) (indices >> 32);
+            int len = (int) indices;
+            byte[] buffer = ((BufferedRecord) records[i]).buffer;
+
+            for (int x = 0; x < kv.length; x++) {
+              if (buffer[idx++] != kv[x]) {
+                System.out.println("FAIL VALUE VALIDATION!!!!!!@ " + i + " Idx: " + idx + " len: " + len + " \n" + Arrays.toString(kv) +"\n" +
+                        Arrays.toString(buffer) +"\n");
+                client.close();
+                System.exit(1);
+              }
+            }
+            validatedKeys++;
+
+            ((BufferedRecord) records[i]).bufferIdx = 0;
           }
-          validatedKeys++;
+
         }
 
         future.complete(validKeys);
@@ -329,7 +353,7 @@ public class Scratch {
       }
     };
 
-    client.get(null, listener, null, keys);
+    client.get(null, listener, null, keys, bufferedRecords);
     try {
       return future.get();
     } catch (InterruptedException e) {

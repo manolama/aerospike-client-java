@@ -36,12 +36,12 @@ public class Record {
 	/**
 	 * Record modification count.
 	 */
-	public final int generation;
+	public int generation;
 
 	/**
 	 * Date record will expire, in seconds from Jan 01 2010 00:00:00 GMT
 	 */
-	public final int expiration;
+	public int expiration;
 
 	/**
 	 * Initialize record.

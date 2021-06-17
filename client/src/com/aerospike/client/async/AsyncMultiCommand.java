@@ -165,6 +165,25 @@ public abstract class AsyncMultiCommand extends AsyncCommand {
 		return new Key(namespace, digest, setName, userKey);
 	}
 
+	protected final void parseRecord(BufferedRecord record) {
+		record.generation = generation;
+		record.expiration = expiration;
+		if (opCount <= 0) {
+			record.bufferIdx = 0;
+			return;
+		}
+
+		for (int i = 0; i < opCount; i++) {
+			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset) + 4;
+			if (record.bufferIdx + opSize >= record.buffer.length) {
+				record.buffer = Arrays.copyOf(record.buffer, record.bufferIdx + opSize);
+			}
+
+			System.arraycopy(dataBuffer, dataOffset, record.buffer, record.bufferIdx, opSize);
+			dataOffset += opSize;
+			record.bufferIdx += opSize;
+		}
+	}
 	protected final Record parseRecord() {
 
 		if (opCount <= 0) {

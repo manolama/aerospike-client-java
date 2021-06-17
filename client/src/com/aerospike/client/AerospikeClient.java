@@ -1201,7 +1201,31 @@ public class AerospikeClient implements IAerospikeClient, Closeable {
 		if (policy == null) {
 			policy = batchPolicyDefault;
 		}
-		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, null, Command.INFO1_READ | Command.INFO1_GET_ALL);
+		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, null, null, Command.INFO1_READ | Command.INFO1_GET_ALL);
+	}
+
+	public final void get(EventLoop eventLoop, RecordArrayListener listener, BatchPolicy policy, Key[] keys, BufferedRecord[] records)
+					throws AerospikeException {
+		if (records == null) {
+			throw new AerospikeException("Records array may not be null.");
+		}
+		if (keys.length != records.length) {
+			throw new AerospikeException("Records length [" + records.length
+							+ "] must match the key length [" + keys.length + "]");
+		}
+		if (keys.length == 0) {
+			listener.onSuccess(keys, new Record[0]);
+			return;
+		}
+
+		if (eventLoop == null) {
+			eventLoop = cluster.eventLoops.next();
+		}
+
+		if (policy == null) {
+			policy = batchPolicyDefault;
+		}
+		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, records, null, Command.INFO1_READ | Command.INFO1_GET_ALL);
 	}
 
 	/**
@@ -1297,7 +1321,7 @@ public class AerospikeClient implements IAerospikeClient, Closeable {
 		if (policy == null) {
 			policy = batchPolicyDefault;
 		}
-		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, binNames, Command.INFO1_READ);
+		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, null, binNames, Command.INFO1_READ);
 	}
 
 	/**
@@ -1392,7 +1416,7 @@ public class AerospikeClient implements IAerospikeClient, Closeable {
 		if (policy == null) {
 			policy = batchPolicyDefault;
 		}
-		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, null, Command.INFO1_READ | Command.INFO1_NOBINDATA);
+		new AsyncBatch.GetArrayExecutor(eventLoop, cluster, policy, listener, keys, null,null, Command.INFO1_READ | Command.INFO1_NOBINDATA);
 	}
 
 	/**

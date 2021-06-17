@@ -48,4 +48,35 @@ public class BufferedRecord extends Record {
     }
     return null;
   }
+
+  public long byteArrayIndex(final String name) {
+    if (bufferIdx <= 0) {
+      return 0;
+    }
+
+    int readIdx = 0;
+    while (readIdx < bufferIdx) {
+      int opSize = Buffer.bytesToInt(buffer, readIdx);
+      byte nameSize = buffer[readIdx + 7];
+      String bin = Buffer.utf8ToString(buffer, readIdx + 8, nameSize);
+      // could be null bins?
+      if (name == null && bin != null) {
+        continue;
+      } else if (name != null && bin == null) {
+        continue;
+      } else if (!name.equals(bin)) {
+        continue;
+      }
+
+      // matched
+      byte particleType = buffer[readIdx + 5];
+      int particleByteSize = opSize - (4 + nameSize);
+      readIdx += 4 + 4 + nameSize;
+      long result = ((long) readIdx) << 32;
+      result |= particleByteSize;
+      return result;
+      //return Buffer.bytesToParticle(particleType, buffer, readIdx, particleByteSize);
+    }
+    return 0;
+  }
 }
