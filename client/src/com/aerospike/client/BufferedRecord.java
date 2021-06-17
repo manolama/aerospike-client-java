@@ -49,23 +49,29 @@ public class BufferedRecord extends Record {
     return null;
   }
 
-  public long byteArrayIndex(final String name) {
+  public long byteArrayIndex(final byte[] binName) {
     if (bufferIdx <= 0) {
       return 0;
     }
 
     int readIdx = 0;
+    BinSearch:
     while (readIdx < bufferIdx) {
       int opSize = Buffer.bytesToInt(buffer, readIdx);
       byte nameSize = buffer[readIdx + 7];
-      String bin = Buffer.utf8ToString(buffer, readIdx + 8, nameSize);
+      //String bin = Buffer.utf8ToString(buffer, readIdx + 8, nameSize);
       // could be null bins?
-      if (name == null && bin != null) {
+      if (binName == null && nameSize > 0) {
         continue;
-      } else if (name != null && bin == null) {
+      } else if (binName != null && nameSize == 0) {
         continue;
-      } else if (!name.equals(bin)) {
-        continue;
+      } else {
+        int idx = readIdx + 8;
+        for (int i = 0; i < binName.length; i++) {
+          if (binName[i] != buffer[idx++]) {
+            break BinSearch;
+          }
+        }
       }
 
       // matched

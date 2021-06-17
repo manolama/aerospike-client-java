@@ -32,6 +32,7 @@ public class Scratch {
   static int runs = 4;
   static int validatedKeys = 0;
   static BufferedRecord[] bufferedRecords;
+  static byte[] binBytes = "b".getBytes(StandardCharsets.UTF_8);
 
   public static void main(final String[] args) {
     Mode mode = Mode.valueOf(args[0]);
@@ -279,7 +280,7 @@ public class Scratch {
           validatedKeys++;
         } else {
           //r = (byte[]) ((BufferedRecord) records[i]).getValueFromBuffer("b");
-          long indices = ((BufferedRecord) bufferedRecords[i]).byteArrayIndex("b");
+          long indices = ((BufferedRecord) bufferedRecords[i]).byteArrayIndex(binBytes);
           int idx = (int) (indices >> 32);
           int len = (int) indices;
           byte[] buffer = ((BufferedRecord) bufferedRecords[i]).buffer;
@@ -339,7 +340,7 @@ public class Scratch {
             validatedKeys++;
 
           } else {
-            long indices = ((BufferedRecord) records[i]).byteArrayIndex("b");
+            long indices = ((BufferedRecord) records[i]).byteArrayIndex(binBytes);
             int idx = (int) (indices >> 32);
             int len = (int) indices;
             byte[] buffer = ((BufferedRecord) records[i]).buffer;
