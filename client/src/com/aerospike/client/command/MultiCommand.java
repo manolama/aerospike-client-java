@@ -38,6 +38,8 @@ import com.aerospike.client.query.QueryValidate;
 public abstract class MultiCommand extends SyncCommand {
 	private static final int MAX_BUFFER_SIZE = 1024 * 1024 * 128;  // 128 MB
 
+	private static final ThreadLocal<byte[]> PROTO_BUFFERS =
+					ThreadLocal.withInitial(() -> new byte[8]);
 	private final Node node;
 	protected final String namespace;
 	private final long clusterKey;
@@ -129,7 +131,7 @@ public abstract class MultiCommand extends SyncCommand {
 
 		while (true) {
 			// Read header
-			byte[] protoBuf = new byte[8];
+			byte[] protoBuf = PROTO_BUFFERS.get();
 			conn.readFully(protoBuf, 8, Command.STATE_READ_HEADER);
 
 			long proto = Buffer.bytesToLong(protoBuf, 0);
