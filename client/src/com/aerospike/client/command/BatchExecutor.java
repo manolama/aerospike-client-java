@@ -42,7 +42,8 @@ public final class BatchExecutor {
 
 		if (policy.maxConcurrentThreads == 1 || batchNodes.size() <= 1) {
 			// Run batch requests sequentially in same thread.
-			for (BatchNode batchNode : batchNodes) {
+			for (int i = 0; i < batchNodes.size(); i++) {
+				BatchNode batchNode = batchNodes.get(i);
 				if (records != null) {
 					MultiCommand command = new Batch.GetArrayCommand(cluster, null, batchNode, policy, keys, binNames, records, readAttr);
 					command.execute();

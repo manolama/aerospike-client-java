@@ -177,7 +177,8 @@ public final class BatchNode {
 	}
 
 	private static BatchNode findBatchNode(List<BatchNode> nodes, Node node) {
-		for (BatchNode batchNode : nodes) {
+		for (int i = 0; i < nodes.size(); i++) {
+			BatchNode batchNode = nodes.get(i);
 			// Note: using pointer equality for performance.
 			if (batchNode.node == node) {
 				return batchNode;

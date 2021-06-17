@@ -712,7 +712,8 @@ public class Cluster implements Runnable, Closeable {
 
 			// Add node's aliases to global alias set.
 			// Aliases are only used in tend thread, so synchronization is not necessary.
-			for (Host alias : node.aliases) {
+			for (int i = 0; i < node.aliases.size(); i++) {
+				Host alias = node.aliases.get(i);
 				aliases.put(alias, node);
 			}
 		}

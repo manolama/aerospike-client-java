@@ -135,8 +135,8 @@ public final class Info {
 		// First, do quick conservative buffer size estimate.
 		offset = 8;
 
-		for (String command : commands) {
-			offset += command.length() * 2 + 1;
+		for (int i = 0; i < commands.size(); i++) {
+			offset += commands.get(i).length() * 2 + 1;
 		}
 
 		// If conservative estimate may be exceeded, get exact estimate
@@ -144,16 +144,16 @@ public final class Info {
 		if (offset > buffer.length) {
 			offset = 8;
 
-			for (String command : commands) {
-				offset += Buffer.estimateSizeUtf8(command) + 1;
+			for (int i = 0; i < commands.size(); i++) {
+				offset += Buffer.estimateSizeUtf8(commands.get(i)) + 1;
 			}
 			resizeBuffer(offset);
 		}
 		offset = 8; // Skip size field.
 
 		// The command format is: <name1>\n<name2>\n...
-		for (String command : commands) {
-			offset += Buffer.stringToUtf8(command, buffer, offset);
+		for (int i = 0; i < commands.size(); i++) {
+			offset += Buffer.stringToUtf8(commands.get(i), buffer, offset);
 			buffer[offset++] = '\n';
 		}
 		sendCommand(conn);

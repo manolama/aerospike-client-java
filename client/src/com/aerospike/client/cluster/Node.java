@@ -414,7 +414,8 @@ public class Node implements Closeable {
 
 			boolean peersValidated = true;
 
-			for (Peer peer : peers.peers) {
+			for (int i = 0; i < peers.peers.size(); i++) {
+				Peer peer = peers.peers.get(i);
 				if (findPeerNode(cluster, peers, peer.nodeName)) {
 					// Node already exists. Do not even try to connect to hosts.
 					continue;
