@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.BatchRead;
+import com.aerospike.client.BufferedRecord;
 import com.aerospike.client.Key;
 import com.aerospike.client.Record;
 import com.aerospike.client.cluster.Cluster;
@@ -79,6 +80,7 @@ public final class Batch {
 		private final String[] binNames;
 		private final Record[] records;
 		private final int readAttr;
+		private final boolean usingBufferedRecords;
 
 		public GetArrayCommand(
 			Cluster cluster,
@@ -95,6 +97,7 @@ public final class Batch {
 			this.binNames = binNames;
 			this.records = records;
 			this.readAttr = readAttr;
+			usingBufferedRecords = records instanceof BufferedRecord[];
 		}
 
 		@Override
@@ -105,7 +108,11 @@ public final class Batch {
 		@Override
 		protected void parseRow(Key key) {
 			if (resultCode == 0) {
-				records[batchIndex] = parseRecord();
+				if (usingBufferedRecords) {
+					parseRecord(((BufferedRecord) records[batchIndex]));
+				} else {
+					records[batchIndex] = parseRecord();
+				}
 			}
 		}
 

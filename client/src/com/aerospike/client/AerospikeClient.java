@@ -1169,6 +1169,15 @@ public class AerospikeClient implements IAerospikeClient, Closeable {
 		return records;
 	}
 
+	public final void get(BatchPolicy policy, Key[] keys, BufferedRecord[] records)
+					throws AerospikeException {
+		if (policy == null) {
+			policy = batchPolicyDefault;
+		}
+
+		BatchExecutor.execute(cluster, policy, keys, null, records, null, Command.INFO1_READ | Command.INFO1_GET_ALL);
+	}
+
 	/**
 	 * Asynchronously read multiple records for specified keys in one batch call.
 	 * This method registers the command with an event loop and returns.
