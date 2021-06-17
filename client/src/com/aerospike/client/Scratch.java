@@ -265,7 +265,7 @@ public class Scratch {
         if (records[i].bins != null) {
           r = (byte[]) records[i].getValue("b");
         } else {
-          //r = (byte[]) records[i].getValueFromBuffer("b");
+          r = (byte[]) records[i].getValueFromBuffer("b");
         }
         for (int x = 0; x < kv.length; x++) {
           if (r[x] != kv[x]) {
@@ -307,7 +307,7 @@ public class Scratch {
           if (records[i].bins != null) {
             r = (byte[]) records[i].getValue("b");
           } else {
-            //r = (byte[]) records[i].getValueFromBuffer("b");
+            r = (byte[]) records[i].getValueFromBuffer("b");
           }
           for (int x = 0; x < kv.length; x++) {
             if (r[x] != kv[x]) {

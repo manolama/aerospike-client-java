@@ -17,6 +17,7 @@
 package com.aerospike.client.command;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.zip.DataFormatException;
@@ -274,21 +275,33 @@ public abstract class MultiCommand extends SyncCommand {
 			return new Record(null, generation, expiration);
 		}
 
-		Map<String,Object> bins = new LinkedHashMap<>();
+		Record r = new Record(null, generation, expiration);
+		for (int i = 0; i < opCount; i++) {
+			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset) + 4;
+			if (r.bufferIdx + opSize >= r.buffer.length) {
+				r.buffer = Arrays.copyOf(r.buffer, r.bufferIdx + opSize);
+			}
 
-		for (int i = 0 ; i < opCount; i++) {
-			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset);
-			byte particleType = dataBuffer[dataOffset + 5];
-			byte nameSize = dataBuffer[dataOffset + 7];
-			String name = Buffer.utf8ToString(dataBuffer, dataOffset + 8, nameSize);
-			dataOffset += 4 + 4 + nameSize;
-
-			int particleBytesSize = opSize - (4 + nameSize);
-			Object value = Buffer.bytesToParticle(particleType, dataBuffer, dataOffset, particleBytesSize);
-			dataOffset += particleBytesSize;
-			bins.put(name, value);
+			System.arraycopy(dataBuffer, dataOffset, r.buffer, r.bufferIdx, opSize);
+			dataOffset += opSize;
+			r.bufferIdx += opSize;
 		}
-		return new Record(bins, generation, expiration);
+		return r;
+//		Map<String,Object> bins = new LinkedHashMap<>();
+//
+//		for (int i = 0 ; i < opCount; i++) {
+//			int opSize = Buffer.bytesToInt(dataBuffer, dataOffset);
+//			byte particleType = dataBuffer[dataOffset + 5];
+//			byte nameSize = dataBuffer[dataOffset + 7];
+//			String name = Buffer.utf8ToString(dataBuffer, dataOffset + 8, nameSize);
+//			dataOffset += 4 + 4 + nameSize;
+//
+//			int particleBytesSize = opSize - (4 + nameSize);
+//			Object value = Buffer.bytesToParticle(particleType, dataBuffer, dataOffset, particleBytesSize);
+//			dataOffset += particleBytesSize;
+//			bins.put(name, value);
+//		}
+//		return new Record(bins, generation, expiration);
 	}
 
 	public void stop() {
