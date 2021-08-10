@@ -588,6 +588,143 @@ public abstract class Command {
 		compress(policy);
 	}
 
+	public final void setBatchRead(BatchPolicy policy, Key[] keys, BatchNode batch, String[] binNames, int readAttr, OperateArgs args) {
+		// Estimate full row size
+		final int[] offsets = batch.offsets;
+		final int max = batch.offsetsSize;
+		final int fieldCountRow = policy.sendSetName ? 2 : 1;
+
+		// Calculate size of bin names.
+		int binNameSize = 0;
+		int operationCount = 0;
+
+		if (binNames != null) {
+			for (String binName : binNames) {
+				binNameSize += Buffer.estimateSizeUtf8(binName) + OPERATION_HEADER_SIZE;
+			}
+			operationCount = binNames.length;
+		}
+
+		// Estimate buffer size.
+		begin();
+		int fieldCount = 1;
+		for (int i = 0; i < max; i++) {
+			int fc = estimateKeySize(policy, keys[i]);
+			if (fc > fieldCount) {
+				fieldCount = fc;
+			}
+		}
+		CommandExp exp = getCommandExp(policy);
+
+		if (exp != null) {
+			dataOffset += exp.size();
+			fieldCount++;
+		}
+
+		dataOffset += FIELD_HEADER_SIZE + 5;
+
+		Key prev = null;
+
+//		for (int i = 0; i < max; i++) {
+//			Key key = keys[offsets[i]];
+//
+//			dataOffset += key.digest.length + 4;
+//
+//			// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
+//			if (prev != null && prev.namespace == key.namespace &&
+//							(! policy.sendSetName || prev.setName == key.setName)) {
+//				// Can set repeat previous namespace/bin names to save space.
+//				dataOffset++;
+//			}
+//			else {
+//				// Must write full header and namespace/set/bin names.
+//				dataOffset += Buffer.estimateSizeUtf8(key.namespace) + FIELD_HEADER_SIZE + 6;
+//
+//				if (policy.sendSetName) {
+//					dataOffset += Buffer.estimateSizeUtf8(key.setName) + FIELD_HEADER_SIZE;
+//				}
+//				dataOffset += binNameSize;
+//				prev = key;
+//			}
+//		}
+
+		// OP
+		dataOffset += args.size;
+
+		sizeBuffer();
+
+//		if (policy.readModeAP == ReadModeAP.ALL) {
+//			readAttr |= Command.INFO1_READ_MODE_AP_ALL;
+//		}
+
+		writeHeaderReadWrite(new WritePolicy(), args.readAttr, args.writeAttr, fieldCount, args.operations.length);
+		//writeHeaderRead(policy, totalTimeout, readAttr | Command.INFO1_BATCH, fieldCount, args.operations.length);
+
+//		int fieldSizeOffset = dataOffset;
+//		writeFieldHeader(0, policy.sendSetName? FieldType.BATCH_INDEX_WITH_SET : FieldType.BATCH_INDEX);  // Need to update size at end
+//
+//		Buffer.intToBytes(max, dataBuffer, dataOffset);
+//		dataOffset += 4;
+//		dataBuffer[dataOffset++] = (policy.allowInline)? (byte)1 : (byte)0;
+//
+//		prev = null;
+
+//		for (int i = 0; i < max; i++) {
+//			int index = offsets[i];
+//			Buffer.intToBytes(index, dataBuffer, dataOffset);
+//			dataOffset += 4;
+//
+//			Key key = keys[index];
+//			byte[] digest = key.digest;
+//			System.arraycopy(digest, 0, dataBuffer, dataOffset, digest.length);
+//			dataOffset += digest.length;
+//
+//			// Try reference equality in hope that namespace/set for all keys is set from fixed variables.
+//			if (prev != null && prev.namespace == key.namespace &&
+//							(! policy.sendSetName || prev.setName == key.setName)) {
+//				// Can set repeat previous namespace/bin names to save space.
+//				dataBuffer[dataOffset++] = 1;  // repeat
+//			}
+//			else {
+//				// Write full header, namespace and bin names.
+//				dataBuffer[dataOffset++] = 0;  // do not repeat
+//				dataBuffer[dataOffset++] = (byte)readAttr;
+//				Buffer.shortToBytes(fieldCountRow, dataBuffer, dataOffset);
+//				dataOffset += 2;
+//				Buffer.shortToBytes(operationCount, dataBuffer, dataOffset);
+//				dataOffset += 2;
+//				writeField(key.namespace, FieldType.NAMESPACE);
+//
+//				if (policy.sendSetName) {
+//					writeField(key.setName, FieldType.TABLE);
+//				}
+//
+//				if (binNames != null) {
+//					for (String binName : binNames) {
+//						writeOperation(binName, Operation.Type.READ);
+//					}
+//				}
+//				prev = key;
+//			}
+//		}
+		for (int i = 0; i < max; i++) {
+			writeKey(policy, keys[i]);
+		}
+
+		if (exp != null) {
+			dataOffset = exp.write(this);
+		}
+
+		// Write real field size.
+		//Buffer.intToBytes(dataOffset - MSG_TOTAL_HEADER_SIZE - 4, dataBuffer, fieldSizeOffset);
+
+		for (Operation operation : args.operations) {
+			writeOperation(operation);
+		}
+		end();
+		compress(policy);
+	}
+
 	public final void setScan(
 		ScanPolicy policy,
 		String namespace,

@@ -77,4 +77,58 @@ public final class BatchExecutor {
 			executor.execute(policy.maxConcurrentThreads);
 		}
 	}
+
+	public static void execute(
+					Cluster cluster,
+					BatchPolicy policy,
+					Key[] keys,
+					boolean[] existsArray,
+					Record[] records,
+					String[] binNames,
+					int readAttr,
+					OperateArgs args
+	) {
+		if (keys.length == 0) {
+			return;
+		}
+
+		List<BatchNode> batchNodes = BatchNodeList.generate(cluster, policy, keys);
+
+		if (policy.maxConcurrentThreads == 1 || batchNodes.size() <= 1) {
+			// Run batch requests sequentially in same thread.
+			for (BatchNode batchNode : batchNodes) {
+				if (records != null) {
+					MultiCommand command = new Batch.GetOpArrayCommand(cluster, null, batchNode, policy, keys, binNames, records, readAttr, args);
+					command.execute();
+				}
+				else {
+					MultiCommand command = new Batch.ExistsArrayCommand(cluster, null, batchNode, policy, keys, existsArray);
+					command.execute();
+				}
+			}
+		}
+		else {
+			// Run batch requests in parallel in separate threads.
+			//
+			// Multiple threads write to the record/exists array, so one might think that
+			// volatile or memory barriers are needed on the write threads and this read thread.
+			// This should not be necessary here because it happens in Executor which does a
+			// volatile write (completedCount.incrementAndGet()) at the end of write threads
+			// and a synchronized waitTillComplete() in this thread.
+			Executor executor = new Executor(cluster, batchNodes.size() * 2);
+
+			// Initialize threads.
+			for (BatchNode batchNode : batchNodes) {
+				if (records != null) {
+					MultiCommand command = new Batch.GetOpArrayCommand(cluster, executor, batchNode, policy, keys, binNames, records, readAttr, args);
+					executor.addCommand(command);
+				}
+				else {
+					MultiCommand command = new Batch.ExistsArrayCommand(cluster, executor, batchNode, policy, keys, existsArray);
+					executor.addCommand(command);
+				}
+			}
+			executor.execute(policy.maxConcurrentThreads);
+		}
+	}
 }

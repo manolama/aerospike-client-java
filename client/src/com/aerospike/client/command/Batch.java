@@ -21,8 +21,10 @@ import java.util.List;
 import com.aerospike.client.AerospikeException;
 import com.aerospike.client.BatchRead;
 import com.aerospike.client.Key;
+import com.aerospike.client.Operation;
 import com.aerospike.client.Record;
 import com.aerospike.client.cluster.Cluster;
+import com.aerospike.client.exp.CommandExp;
 import com.aerospike.client.policy.BatchPolicy;
 import com.aerospike.client.policy.ReadModeSC;
 import com.aerospike.client.policy.Replica;
@@ -74,11 +76,11 @@ public final class Batch {
 	// GetArray
 	//-------------------------------------------------------
 
-	public static final class GetArrayCommand extends BatchCommand {
-		private final Key[] keys;
-		private final String[] binNames;
-		private final Record[] records;
-		private final int readAttr;
+	public static class GetArrayCommand extends BatchCommand {
+		protected final Key[] keys;
+		protected final String[] binNames;
+		protected final Record[] records;
+		protected final int readAttr;
 
 		public GetArrayCommand(
 			Cluster cluster,
@@ -117,6 +119,34 @@ public final class Batch {
 		@Override
 		protected List<BatchNode> generateBatchNodes() {
 			return BatchNodeList.generate(cluster, batchPolicy, keys, sequenceAP, sequenceSC, batch);
+		}
+	}
+
+	public static final class GetOpArrayCommand extends GetArrayCommand {
+
+		OperateArgs operateArgs;
+
+		GetOpArrayCommand(Cluster cluster,
+											Executor parent,
+											BatchNode batch,
+											BatchPolicy policy,
+											Key[] keys,
+											String[] binNames,
+											Record[] records,
+											int readAttr,
+											OperateArgs operateArgs) {
+			super(cluster, parent, batch, policy, keys, binNames, records, readAttr);
+			this.operateArgs = operateArgs;
+		}
+
+		@Override
+		protected void writeBuffer() {
+			setBatchRead(batchPolicy, keys, batch, binNames, readAttr, operateArgs);
+		}
+
+		@Override
+		protected BatchCommand createCommand(BatchNode batchNode) {
+			return new GetOpArrayCommand(cluster, parent, batchNode, batchPolicy, keys, binNames, records, readAttr, operateArgs);
 		}
 	}
 

@@ -70,9 +70,9 @@ public class MapOperation {
 	private static final int SET_TYPE = 64;
 	static final int ADD = 65;
 	static final int ADD_ITEMS = 66;
-	static final int PUT = 67;
+	public static final int PUT = 67;
 	static final int PUT_ITEMS = 68;
-	static final int REPLACE = 69;
+	public static final int REPLACE = 69;
 	static final int REPLACE_ITEMS = 70;
 	private static final int INCREMENT = 73;
 	private static final int DECREMENT = 74;

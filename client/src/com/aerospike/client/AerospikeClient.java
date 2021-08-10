@@ -1170,6 +1170,18 @@ public class AerospikeClient implements IAerospikeClient, Closeable {
 		return records;
 	}
 
+	public final Record[] get(BatchPolicy policy, Key[] keys, Operation... operations)
+					throws AerospikeException {
+		if (policy == null) {
+			policy = batchPolicyDefault;
+		}
+		Record[] records = new Record[keys.length];
+		// key is just used for the partition. We'll ignore the partition for the batching.
+		OperateArgs args = new OperateArgs(cluster, writePolicyDefault, writePolicyDefault, operatePolicyReadDefault, keys[0], operations);
+		BatchExecutor.execute(cluster, policy, keys, null, records, null, Command.INFO1_READ | Command.INFO1_GET_ALL, args);
+		return records;
+	}
+
 	/**
 	 * Asynchronously read multiple records for specified keys in one batch call.
 	 * This method registers the command with an event loop and returns.
